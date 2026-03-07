@@ -1,0 +1,48 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  analyze:
+    name: Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pylint pytest pytest-cov coverage
+
+      - name: Analyze with pylint
+        run: |
+          pylint dji_osd_tool.py --disable=all --enable=E,F || exit 0
+
+      - name: Check with type hints (mypy)
+        run: |
+          pip install mypy
+          mypy dji_osd_tool.py --ignore-missing-imports || true
+
+      - name: Run coverage
+        run: |
+          pytest --cov=. --cov-report=xml --cov-report=term || true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false

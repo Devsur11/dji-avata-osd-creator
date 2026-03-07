@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 DJI Avata OSD Overlay Tool — GUI Edition v2.2
+Runs on Windows, macOS, and Linux
+
 • Multi-flight detection from a single CSV
 • Visual OSD layout editor with per-element toggle, X/Y offset, drag-and-drop
 • Precise scale mirroring from original dji_osd_overlay.py
@@ -13,7 +16,14 @@ DJI Avata OSD Overlay Tool — GUI Edition v2.2
 import cv2
 import pandas as pd
 import numpy as np
-import os, sys, json, shutil, subprocess, threading, queue
+import os
+import sys
+import json
+import shutil
+import subprocess
+import threading
+import queue
+import platform
 from datetime import timedelta
 from pathlib import Path
 
@@ -45,7 +55,21 @@ OSD_ELEMENTS = {
     "remaining_time":  dict(label="Remaining Flight Time",  nx=0.966, ny=0.078, nw=0.050, nh=0.020, group="Top Right"),
 }
 
-SETTINGS_DIR  = Path.home() / ".dji_osd_tool"
+# ═════════════════════════════════════════════════════════════════════════════
+#  Cross-platform path helpers
+# ═════════════════════════════════════════════════════════════════════════════
+def get_app_data_dir() -> Path:
+    """Get platform-specific application data directory for settings."""
+    if platform.system() == "Windows":
+        # Windows: use AppData/Local if available, fall back to home
+        appdata = os.getenv("LOCALAPPDATA")
+        if appdata:
+            return Path(appdata) / "dji_osd_tool"
+    # macOS and Linux: use ~/.dji_osd_tool
+    return Path.home() / ".dji_osd_tool"
+
+
+SETTINGS_DIR  = get_app_data_dir()
 SETTINGS_FILE = SETTINGS_DIR / "osd_settings.json"
 
 
