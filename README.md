@@ -207,7 +207,7 @@ Edit the settings JSON file directly:
 Your CSV file must include these timestamp and telemetry columns:
 
 ### Required Columns
-- `timestamp`: ISO 8601 datetime (e.g., "2024-03-07T10:30:45.123Z")
+- `timestamp`: ISO 8601 datetime (e.g., "2026-03-07T10:30:45.123Z")
 
 ### Location Data
 - `flight.osd.lat_deg`, `flight.osd.lon_deg`: Current GPS coordinates
@@ -333,7 +333,6 @@ dji-osd-tool/
 ├── setup.py                # Package configuration
 ├── README.md               # This file
 ├── CONTRIBUTING.md         # Contribution guidelines
-├── CHANGELOG.md            # Version history
 ├── LICENSE                 # MIT License
 ├── .gitignore             # Git ignore patterns
 ├── .flake8                # Flake8 linting config
@@ -420,7 +419,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 If you use this tool in your work, please cite:
 
 ```
-DJI OSD Tool (2024)
+DJI OSD Tool (2026)
 Author: Devsur11
 Repository: https://github.com/Devsur11/dji-osd-tool
 ```
@@ -436,4 +435,4 @@ The authors are not liable for misuse or damages resulting from this software.
 
 ---
 
-**Last Updated**: March 2024 | Version 2.2.0
+**Last Updated**: March 2026 | Version 2.2.0
