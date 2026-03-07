@@ -67,5 +67,23 @@ jobs:
       - name: Verify imports on ${{ matrix.os }}
         run: python -c "import sys; import cv2; import pandas; import numpy; print(f'All imports successful on {sys.platform}')"
 
-      - name: Test CLI help
-        run: python dji_osd_tool.py --help || python dji_osd_tool.py 2>&1 | grep -i "overlay\|check\|gui" || true
+      - name: Test module structure
+        run: |
+          python -c "
+          import inspect
+          import dji_osd_tool
+          
+          # Verify key classes and functions exist
+          assert hasattr(dji_osd_tool, 'OSDSettings'), 'Missing OSDSettings class'
+          assert hasattr(dji_osd_tool, 'DJIOSDOverlay'), 'Missing DJIOSDOverlay class'
+          assert hasattr(dji_osd_tool, 'detect_flights'), 'Missing detect_flights function'
+          assert hasattr(dji_osd_tool, 'get_video_info'), 'Missing get_video_info function'
+          assert hasattr(dji_osd_tool, 'cli_main'), 'Missing cli_main function'
+          
+          # Verify CLI main is callable
+          assert callable(dji_osd_tool.cli_main), 'cli_main is not callable'
+          
+          print('All module structure checks passed!')
+          print('Available classes: OSDSettings, DJIOSDOverlay')
+          print('Available functions: detect_flights, get_video_info, cli_main, get_app_data_dir')
+          "
