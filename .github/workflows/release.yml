@@ -85,8 +85,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -160,37 +158,43 @@ jobs:
             echo "EOF" 
           } >> $GITHUB_OUTPUT
 
-      - name: Create Release
-        uses: actions/create-release@v1
+      - name: Create Release or Update if exists
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          release_name: "Release ${{ steps.version.outputs.version }}"
-          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
-          draft: false
-          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') }}
-        id: create_release
+          TAG: ${{ steps.version.outputs.version }}
+          NOTES: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+        run: |
+          # Check if release exists
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists, updating..."
+            gh release edit "$TAG" --notes "$NOTES"
+          else
+            echo "Creating new release $TAG..."
+            IS_PRERELEASE=""
+            if [[ "$TAG" == *"alpha"* ]] || [[ "$TAG" == *"beta"* ]]; then
+              IS_PRERELEASE="--prerelease"
+            fi
+            gh release create "$TAG" --title "Release $TAG" --notes "$NOTES" $IS_PRERELEASE
+          fi
+        shell: bash
 
-      - name: Upload Windows executable to release
-        uses: actions/upload-release-asset@v1
+      - name: Upload executables to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./windows-build/dji-osd-tool.exe
-          asset_name: dji-osd-tool-windows.exe
-          asset_content_type: application/octet-stream
-
-      - name: Upload Linux executable to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./linux-build/dji-osd-tool
-          asset_name: dji-osd-tool-linux
-          asset_content_type: application/octet-stream
+          TAG: ${{ steps.version.outputs.version }}
+        run: |
+          # Upload Windows executable
+          if [ -f "./windows-build/dji-osd-tool.exe" ]; then
+            echo "Uploading Windows executable..."
+            gh release upload "$TAG" "./windows-build/dji-osd-tool.exe" --clobber || true
+          fi
+          
+          # Upload Linux executable
+          if [ -f "./linux-build/dji-osd-tool" ]; then
+            echo "Uploading Linux executable..."
+            gh release upload "$TAG" "./linux-build/dji-osd-tool" --clobber || true
+          fi
+        shell: bash
 
   source-artifacts:
     name: Upload Source Artifacts
@@ -213,25 +217,17 @@ jobs:
           zip -r artifacts/dji-osd-tool-source.zip . -x "*.git*" "__pycache__/*" "*.pyc" ".tox/*" ".pytest_cache/*" "build/*" "dist/*" "*.spec"
           tar --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' --exclude='.tox' --exclude='.pytest_cache' --exclude='build' --exclude='dist' --exclude='*.spec' -czf artifacts/dji-osd-tool-source.tar.gz .
 
-      - name: Upload source artifacts to release
-        uses: actions/upload-release-asset@v1
+      - name: Upload source code to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: artifacts/dji-osd-tool-source.zip
-          asset_name: dji-osd-tool-source.zip
-          asset_content_type: application/zip
-
-      - name: Upload source tar.gz to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: artifacts/dji-osd-tool-source.tar.gz
-          asset_name: dji-osd-tool-source.tar.gz
-          asset_content_type: application/gzip
+          TAG: ${{ steps.version.outputs.version }}
+        run: |
+          echo "Uploading source archives to release $TAG..."
+          gh release upload "$TAG" \
+            artifacts/dji-osd-tool-source.zip \
+            artifacts/dji-osd-tool-source.tar.gz \
+            --clobber || true
+        shell: bash
 
       - name: Display generated artifacts
         run: ls -lh artifacts/
