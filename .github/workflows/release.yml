@@ -80,7 +80,7 @@ jobs:
           tar --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' --exclude='.tox' --exclude='.pytest_cache' -czf artifacts/dji-osd-tool-source.tar.gz .
 
       - name: Upload artifacts as release attachments
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: source-artifacts
           path: artifacts/
