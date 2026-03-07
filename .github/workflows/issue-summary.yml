@@ -1,0 +1,50 @@
+name: Summarize Issues with AI
+
+on:
+  issues:
+    types: [opened, edited]
+  pull_request:
+    types: [opened, edited]
+
+jobs:
+  summarize:
+    name: Generate AI Summary
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Add initial response
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue || context.payload.pull_request;
+            if (!issue) return;
+            
+            const title = issue.title || 'No title';
+            const body = issue.body || 'No description provided';
+            const type = context.payload.issue ? 'Issue' : 'Pull Request';
+            
+            const summary = `
+            Analysis of ${type}: "${title}"
+            
+            Key details:
+            - Type: ${type}
+            - Author: @${issue.user.login}
+            - Created: ${issue.created_at}
+            ${issue.labels.length > 0 ? `- Labels: ${issue.labels.map(l => '#' + l.name).join(', ')}` : ''}
+            
+            Description length: ${body.length} characters
+            
+            This ${type.toLowerCase()} has been received and is being processed.
+            
+            *Automated summary by AI Assistant*
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });

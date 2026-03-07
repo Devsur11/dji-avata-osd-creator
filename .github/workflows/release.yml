@@ -1,112 +1,89 @@
-name: Release
+name: Create Release & Build Artifacts
 
 on:
   push:
     tags:
-      - 'v*'
-
-permissions:
-  contents: write
+      - 'v*.*.*'
+      - 'release-*'
 
 jobs:
-  create-release:
+  release:
     name: Create Release
     runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Extract version from tag
         id: version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          TAG=${{ github.ref }}
+          VERSION=${TAG#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          {
+            echo "RELEASE_NOTES<<EOF"
+            echo "# DJI OSD Tool Release ${{ steps.version.outputs.version }}"
+            echo ""
+            echo "## Changes"
+            if [ -f CHANGELOG.md ]; then
+              grep -A20 "## \[${{ steps.version.outputs.version }}\]" CHANGELOG.md || echo "See CHANGELOG.md for details"
+            else
+              echo "For detailed changes, check the commit history"
+            fi
+            echo ""
+            echo "## Installation"
+            echo "1. Download the source code (zip or tar.gz)"
+            echo "2. Extract the archive"
+            echo "3. Install dependencies: \`pip install -r requirements.txt\`"
+            echo "4. Run: \`python dji_osd_tool.py\`"
+            echo ""
+            echo "## Requirements"
+            echo "- Python 3.8+"
+            echo "- OpenCV, pandas, numpy"
+            echo ""
+            echo "Supported platforms: Windows, macOS, Linux"
+            echo "EOF" 
+          } >> $GITHUB_OUTPUT
 
       - name: Create Release
-        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ steps.version.outputs.version }}
+          tag_name: ${{ steps.version.outputs.version }}
+          release_name: "Release ${{ steps.version.outputs.version }}"
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') }}
 
-  build-artifacts:
-    name: Build Artifacts
-    needs: create-release
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact_name: dji-osd-tool_linux_x64
-            asset_name: dji-osd-tool-linux-x64.tar.gz
-          - os: windows-latest
-            artifact_name: dji-osd-tool_windows_x64.exe
-            asset_name: dji-osd-tool-windows-x64.exe
+  source-artifacts:
+    name: Upload Source Artifacts
+    needs: release
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Create source archives
+        run: |
+          mkdir -p artifacts
+          zip -r artifacts/dji-osd-tool-source.zip . -x "*.git*" "__pycache__/*" "*.pyc" ".tox/*" ".pytest_cache/*" "build/*" "dist/*"
+          tar --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' --exclude='.tox' --exclude='.pytest_cache' -czf artifacts/dji-osd-tool-source.tar.gz .
+
+      - name: Upload artifacts as release attachments
+        uses: actions/upload-artifact@v3
         with:
-          python-version: '3.11'
+          name: source-artifacts
+          path: artifacts/
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
-
-      - name: Build with PyInstaller (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-tk
-          pyinstaller --onefile \
-            --add-data "LICENSE:." \
-            --add-data "README.md:." \
-            --name dji-osd-tool \
-            dji_osd_tool.py
-
-      - name: Build with PyInstaller (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          pyinstaller --onefile --windowed `
-            --add-data "LICENSE;." `
-            --add-data "README.md;." `
-            --name dji-osd-tool `
-            dji_osd_tool.py
-
-      - name: Create archive (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          tar -czf dji-osd-tool-linux-x64.tar.gz -C dist dji-osd-tool
-          ls -lh dji-osd-tool-linux-x64.tar.gz
-
-      - name: Upload Release Asset (Linux)
-        if: runner.os == 'Linux'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./dji-osd-tool-linux-x64.tar.gz
-          asset_name: dji-osd-tool-linux-x64.tar.gz
-          asset_content_type: application/gzip
-
-      - name: Upload Release Asset (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./dist/dji-osd-tool.exe
-          asset_name: dji-osd-tool-windows-x64.exe
-          asset_content_type: application/octet-stream
+      - name: Display generated artifacts
+        run: ls -lh artifacts/
