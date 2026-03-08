@@ -373,56 +373,17 @@ dji-osd-tool/
 - Memory usage: ~200-500 MB during processing
 - File output: Similar size to input (overlay adds ~5-10%)
 
-## Known Limitations
-
-- Requires telemetry data from compatible DJI drones
-- Video frame rate and telemetry sample rate should be reasonably matched
-- GUI requires display server (not suitable for headless servers)
-- Some telemetry fields may not be available from all drone models
-
-## Contributing
-
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- Code style guidelines
-- Testing requirements
-- Pull request process
-- Development setup
-
 ## License
 
 MIT License - See [LICENSE](LICENSE) file for details
 
 Free to use, modify, and distribute with attribution.
 
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 
 ## Support
 
 - GitHub Issues: [Report bugs or request features](https://github.com/Devsur11/dji-osd-tool/issues)
-- Discussions: [Ask questions or share ideas](https://github.com/Devsur11/dji-osd-tool/discussions)
 - Documentation: Check README and inline code comments
-
-## Credits
-
-**Author**: Devsur11
-
-**Acknowledgments**:
-- OpenCV community for computer vision library
-- Pandas for data processing
-- Tkinter for GUI framework
-- DJI for flight telemetry specifications
-
-## Citation
-
-If you use this tool in your work, please cite:
-
-```
-DJI OSD Tool (2026)
-Author: Devsur11
-Repository: https://github.com/Devsur11/dji-osd-tool
-```
 
 ## Disclaimer
 
